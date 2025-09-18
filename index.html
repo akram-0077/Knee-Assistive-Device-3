@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Knee Assistive Device - Premium Portal</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+ <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div class="header-bar">
+    <div class="logo">
+      <i class="fas fa-heartbeat"></i>
+      <span>Knee Assistive Device</span>
+    </div>
+  </div>
+
+  <div id="patient-info-bar" class="patient-info-bar">
+    <div class="flex items-center gap-4">
+      <i class="fas fa-user-check text-xl"></i>
+      <div>
+        <span class="font-semibold">Pasien Aktif:</span> <span id="active-patient-name" class="gradient-text">-</span>
+        <span class="mx-3">|</span>
+        <span class="font-semibold">Usia:</span> <span id="active-patient-age">-</span>
+        <span class="mx-3">|</span>
+        <span class="font-semibold">Sesi Ke:</span> <span id="active-patient-session">-</span>
+      </div>
+    </div>
+    <div class="flex gap-2">
+      <button class="btn-info" onclick="viewDataOnly()">
+        <i class="fas fa-eye"></i>
+        Lihat Data
+      </button>
+      <button class="btn-danger" onclick="resetPatientSelection()">
+        <i class="fas fa-times"></i>
+        Reset
+      </button>
+    </div>
+  </div>
+
+
+  <!-- Navbar -->
+  <div class="navbar flex items-center justify-between px-6 py-4 bg-blue-900 text-white shadow-lg">
+    <!-- Logo -->
+    <div class="logo text-xl font-bold flex items-center space-x-2">
+      <i class="fas fa-stethoscope"></i>
+      <span>Dashboard</span>
+    </div>
+
+    <!-- Nav Links -->
+    <nav class="nav-links flex space-x-6">
+      <div class="nav-item active cursor-pointer" onclick="showTab('patient-selection', this)">
+        <i class="fas fa-user-plus"></i> Pilih Pasien
+      </div>
+      <div class="nav-item cursor-pointer" onclick="showTab('realtime-monitor', this)">
+        <i class="fas fa-chart-line"></i> Monitor Real-time
+      </div>
+      <div class="nav-item cursor-pointer" onclick="showTab('analysis-classification', this)">
+        <i class="fas fa-microchip"></i> Analisis & Klasifikasi
+      </div>
+      <div class="nav-item cursor-pointer" onclick="showTab('log-aktivitas', this)">
+        <i class="fas fa-clipboard-list"></i> Log Aktivitas
+      </div>
+      <div class="nav-item cursor-pointer" onclick="showTab('data', this)">
+        <i class="fas fa-database"></i> Data Rehabilitasi
+      </div>
+    </nav>
+  </div>
+
+  <div class="flex-1">
+    <div class="main-content">
+      <div id="patient-selection" class="tab-content active">
+        <div class="text-center mb-8">
+          <h1 class="text-4xl font-bold gradient-text mb-4">Pilih Tipe Pasien</h1>
+          <p class="text-slate-400 text-lg">Mulai sesi rehabilitasi dengan memilih pasien baru atau lama</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-8 mb-8">
+          <div class="patient-type-card" onclick="showNewPatientForm()">
+            <div class="text-6xl mb-6">
+              <i class="fas fa-user-plus text-blue-400"></i>
+            </div>
+            <h3 class="text-2xl font-bold mb-3 gradient-text">Pendaftaran</h3>
+            <p class="text-slate-400 text-lg">Daftarkan pasien baru untuk rehabilitasi</p>
+          </div>
+
+          <div class="patient-type-card" onclick="showExistingPatientList()">
+            <div class="text-6xl mb-6">
+              <i class="fas fa-users text-purple-400"></i>
+            </div>
+            <h3 class="text-2xl font-bold mb-3 gradient-text">Daftar Pasien</h3>
+            <p class="text-slate-400 text-lg">Pilih dari daftar pasien yang sudah terdaftar</p>
+          </div>
+        </div>
+
+        <div id="new-patient-form" class="card" style="display: none;">
+          <div class="flex items-center mb-6">
+            <i class="fas fa-user-edit text-2xl text-blue-400 mr-4"></i>
+            <h3 class="text-2xl font-bold gradient-text">Pendaftaran Pasien Baru</h3>
+          </div>
+
+          <div class="grid grid-cols-1 gap-6">
+            <div>
+              <label class="block text-sm font-semibold text-slate-300 mb-2">Nama Lengkap</label>
+              <input type="text" id="new-patient-name" placeholder="Masukkan nama lengkap pasien" class="form-input" />
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-slate-300 mb-2">Usia</label>
+              <input type="number" id="new-patient-age" placeholder="Masukkan usia pasien" class="form-input" />
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-slate-300 mb-2">Jenis Kelamin</label>
+              <select id="new-patient-gender" class="form-input">
+                <option value="">Pilih jenis kelamin</option>
+                <option value="Laki-laki">L</option>
+                <option value="Perempuan">P</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-slate-300 mb-2">Tanggal Sesi</label>
+              <input type="date" id="new-patient-date" class="form-input" />
+            </div>
+
+            <div class="flex gap-4 pt-4">
+              <button id="register-btn" onclick="registerNewPatient()" class="btn-primary flex-1">
+                <i class="fas fa-save"></i>
+                Daftar Pasien
+              </button>
+              <button onclick="cancelNewPatient()" class="btn-secondary">
+                <i class="fas fa-times"></i>
+                Batal
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div id="edit-patient-form" class="card" style="display: none;">
+          <div class="flex items-center mb-6">
+            <i class="fas fa-user-edit text-2xl text-orange-400 mr-4"></i>
+            <h3 class="text-2xl font-bold gradient-text">Edit Data Pasien</h3>
+          </div>
+
+          <div class="grid grid-cols-1 gap-6">
+            <div>
+              <label class="block text-sm font-semibold text-slate-300 mb-2">Nama Lengkap</label>
+              <input type="text" id="edit-patient-name" placeholder="Masukkan nama lengkap pasien" class="form-input" />
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-slate-300 mb-2">Usia</label>
+              <input type="number" id="edit-patient-age" placeholder="Masukkan usia pasien" class="form-input" />
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-slate-300 mb-2">Jenis Kelamin</label>
+              <select id="edit-patient-gender" class="form-input">
+                <option value="">Pilih jenis kelamin</option>
+                <option value="Laki-laki">Laki-laki</option>
+                <option value="Perempuan">Perempuan</option>
+                <option value="Tidak Diketahui">Tidak Diketahui</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-slate-300 mb-2">Tanggal Pendaftaran</label>
+              <input type="date" id="edit-patient-date" class="form-input" />
+            </div>
+          </div>
+
+          <div class="flex gap-4 pt-4">
+            <button id="update-patient-btn" onclick="updatePatient()" class="btn-primary flex-1">
+              <i class="fas fa-save"></i>
+              Update Pasien
+            </button>
+            <button onclick="cancelEditPatient()" class="btn-secondary">
+              <i class="fas fa-times"></i>
+              Batal
+            </button>
+          </div>
+        </div>
+
+        <div id="existing-patient-list" class="card" style="display: none;">
+          <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center">
+              <i class="fas fa-list text-2xl text-purple-400 mr-4"></i>
+              <h3 class="text-2xl font-bold gradient-text">Daftar Pasien</h3>
+            </div>
+            <div class="flex gap-3">
+              <button onclick="cancelExistingPatient()" class="btn-secondary">
+                <i class="fas fa-times"></i>
+                Batal
+              </button>
+            </div>
+          </div>
+
+          <div class="space-y-4" id="patient-cards-container">
+          </div>
+        </div>
+      </div>
+
+      <div id="realtime-monitor" class="tab-content">
+        <div id="no-patient-warning-realtime" class="warning-box">
+          <div class="flex items-center">
+            <i class="fas fa-exclamation-triangle text-yellow-500 text-xl mr-3"></i>
+            <div>
+              <p class="font-bold text-yellow-400">Tidak Ada Pasien yang Dipilih</p>
+              <p class="text-yellow-300">Silakan pilih pasien terlebih dahulu di menu "Pilih Pasien"</p>
+            </div>
+          </div>
+        </div>
+
+        <div id="realtime-content" style="display: none;">
+          <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center">
+              <i class="fas fa-chart-area text-2xl text-blue-400 mr-4"></i>
+              <h1 class="text-3xl font-bold gradient-text">Monitor Real-time</h1>
+            </div>
+            <div class="flex items-center gap-4">
+              <span id="thingspeak-status" class="status-indicator stopped">
+                <i class="fas fa-circle mr-2"></i>
+                Tidak Terhubung
+              </span>
+              <div id="debug-info" class="bg-slate-800 p-2 rounded text-xs">
+                <div class="text-slate-400">Waiting for data...</div>
+              </div>
+            </div>
+          </div>
+
+          <div id="mvc-status" style="display:none;"
+            class="bg-slate-800 px-4 py-2 rounded-lg border border-slate-600 mb-4"></div>
+
+
+
+
+
+          <div class="grid grid-cols-2 gap-6 mb-6">
+            <div class="chart-container">
+              <div class="flex items-center mb-4">
+                <i class="fas fa-angle-double-up text-blue-400 mr-3"></i>
+                <h4 class="text-lg font-semibold">Grafik Sudut Lutut</h4>
+              </div>
+              <canvas id="angle-chart" style="max-height: 200px;"></canvas>
+            </div>
+
+            <div class="chart-container">
+              <div class="flex items-center mb-4">
+                <i class="fas fa-weight-hanging text-green-400 mr-3"></i>
+                <h4 class="text-lg font-semibold">Grafik Sinyal EMG</h4>
+              </div>
+              <canvas id="emg-chart" style="max-height: 200px;"></canvas>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4 mb-6">
+            <div class="stat-card">
+              <div class="stat-value" id="average-angle">0°</div>
+              <p class="text-slate-400">Sudut Lutut</p>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value text-green-400" id="average-rms-emg">0 mV</div>
+              <p class="text-slate-400">RMS EMG (mV)</p>
+            </div>
+
+          </div>
+
+          <div class="grid grid-cols-2 gap-6 mb-6">
+
+            <div class="card">
+              <div class="mb-6">
+                <div class="flex items-center justify-between mb-4">
+                  <div class="flex items-center">
+                    <i class="fas fa-cog text-2xl text-orange-400 mr-4"></i>
+                    <h3 class="text-xl font-bold gradient-text">Kalibrasi EMG</h3>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs text-slate-400">Status:</span>
+                    <span id="calibration-status"
+                      class="px-2 py-1 rounded-full text-xs font-bold bg-slate-700 text-slate-300">Siap</span>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3 mb-4">
+                  <div class="bg-slate-800 p-3 rounded-lg text-center">
+                    <div class="flex items-center justify-center mb-2">
+                      <i class="fas fa-bullseye text-orange-400 mr-2"></i>
+                      <span class="text-xs font-medium text-slate-300">MVC Ref</span>
+                    </div>
+                    <div id="mvc-reference-value" class="text-lg font-bold text-orange-400">0 mV</div>
+                  </div>
+
+                  <div class="bg-slate-800 p-3 rounded-lg text-center">
+                    <div class="flex items-center justify-center mb-2">
+                      <i class="fas fa-percentage text-green-400 mr-2"></i>
+                      <span class="text-xs font-medium text-slate-300">%MVC</span>
+                    </div>
+                    <div id="current-mvc-percentage" class="text-lg font-bold text-green-400">0%</div>
+                  </div>
+
+                  <div class="bg-slate-800 p-3 rounded-lg text-center">
+                    <div class="flex items-center justify-center mb-2">
+                      <i class="fas fa-chart-line text-blue-400 mr-2"></i>
+                      <span class="text-xs font-medium text-slate-300">RMS EMG</span>
+                    </div>
+                    <div id="current-rms-emg" class="text-lg font-bold text-blue-400">0 mV</div>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                  <button id="start-calibration-btn" onclick="startEMGCalibration()" class="btn-warning flex-1">
+                    <i class="fas fa-play"></i>
+                    Mulai Kalibrasi
+                  </button>
+                  <button id="stop-calibration-btn" onclick="stopEMGCalibration()" class="btn-danger"
+                    style="display: none;">
+                    <i class="fas fa-stop"></i>
+                  </button>
+                  <div id="calibration-progress" class="flex-1 bg-slate-700 rounded-full h-2" style="display: none;">
+                    <div id="calibration-progress-bar"
+                      class="bg-orange-400 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                  </div>
+                  <span id="calibration-timer" class="text-sm text-slate-400" style="display: none;">0s</span>
+                </div>
+
+                <div id="calibration-instructions" class="mt-3 p-3 bg-slate-800 rounded-lg" style="display: none;">
+                  <div class="flex items-center mb-2">
+                    <i class="fas fa-info-circle text-blue-400 mr-2"></i>
+                    <span class="font-semibold text-blue-400 text-sm">Instruksi Kalibrasi</span>
+                  </div>
+                  <p class="text-slate-300 text-xs">
+                    Kontraksikan otot paha secara maksimal selama 5 detik.
+                    Sistem akan mengukur nilai RMS EMG tertinggi sebagai referensi MVC.
+                  </p>
+                </div>
+              </div>
+
+              <div class="border-t border-slate-600 pt-4">
+                <div class="flex items-center justify-between mb-4">
+                  <div class="flex items-center">
+                    <i class="fas fa-shield-alt text-2xl text-red-400 mr-4"></i>
+                    <h3 class="text-xl font-bold gradient-text">Safety System</h3>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs text-slate-400">Status:</span>
+                    <span id="safety-status"
+                      class="px-2 py-1 rounded-full text-xs font-bold bg-green-700 text-green-300">Aman</span>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                  <div class="bg-slate-800 p-3 rounded-lg">
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-xs font-medium text-slate-300">Pressure Sensor</span>
+                      <i id="pressure-sensor-icon" class="fas fa-circle text-green-400"></i>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-bold text-green-400" id="pressure-value">Normal</span>
+                      <span class="text-xs text-slate-400" id="pressure-unit">kPa</span>
+                    </div>
+                  </div>
+
+                  <div class="bg-slate-800 p-3 rounded-lg">
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-xs font-medium text-slate-300">Safety Rules</span>
+                      <i id="safety-rules-icon" class="fas fa-check-circle text-green-400"></i>
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-bold text-green-400" id="safety-rules-status">Compliant</span>
+                      <span class="text-xs text-slate-400" id="safety-violations">0 violations</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div id="safety-alert" class="p-3 bg-red-900 border border-red-600 rounded-lg" style="display: none;">
+                  <div class="flex items-center">
+                    <i class="fas fa-exclamation-triangle text-red-400 mr-2"></i>
+                    <div>
+                      <p class="font-bold text-red-400 text-sm">Safety Alert!</p>
+                      <p class="text-red-300 text-xs" id="safety-alert-message">Safety rules violated. Please check
+                        device positioning.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div id="session-control-panel" class="card">
+              <div class="flex items-center mb-6">
+                <i class="fas fa-play-circle text-2xl text-green-400 mr-4"></i>
+                <h4 class="text-xl font-semibold gradient-text">Kontrol Sesi Rehabilitasi</h4>
+              </div>
+
+              <div class="flex items-center gap-3 bg-slate-800 px-6 py-3 rounded-xl border border-slate-600 mb-4">
+                <i class="fas fa-clock text-blue-400"></i>
+                <span class="font-semibold">Durasi Sesi:</span>
+                <span id="session-time" class="font-mono font-bold text-xl text-blue-400">00:00:00</span>
+              </div>
+
+              <div class="flex flex-col gap-4">
+                <div class="flex items-center gap-4">
+                  <button id="session-btn" onclick="toggleSession()" class="btn-success flex-1">
+                    <i class="fas fa-play"></i>
+                    Mulai Sesi
+                  </button>
+                  <button id="end-session-btn" onclick="endSession()" disabled class="btn-danger opacity-50 flex-1">
+                    <i class="fas fa-stop"></i>
+                    Akhiri Sesi
+                  </button>
+                </div>
+
+                <div class="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4 text-center">
+                  <i class="fas fa-exclamation-triangle text-yellow-400 mb-2"></i>
+                  <p class="text-yellow-300 font-medium">Lakukan Kalibrasi EMG terlebih dahulu</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+
+
+          <div id="view-only-notice" class="info-box" style="display: none;">
+            <div class="flex items-center">
+              <i class="fas fa-eye text-blue-500 text-xl mr-3"></i>
+              <div>
+                <p class="font-bold text-blue-400">Mode Lihat Data</p>
+                <p class="text-blue-300">Anda sedang melihat data pasien tanpa memulai sesi baru. <button
+                    onclick="startNewSession()" class="btn-primary inline ml-2">Mulai Sesi Baru</button></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="analysis-classification" class="tab-content">
+        <div id="no-patient-warning-analysis" class="warning-box">
+          <div class="flex items-center">
+            <i class="fas fa-exclamation-triangle text-yellow-500 text-xl mr-3"></i>
+            <div>
+              <p class="font-bold text-yellow-400">Tidak Ada Pasien yang Dipilih</p>
+              <p class="text-yellow-300">Silakan pilih pasien terlebih dahulu di menu "Pilih Pasien"</p>
+            </div>
+          </div>
+        </div>
+
+        <div id="analysis-classification-content" style="display: none;">
+          <div class="flex items-center justify-between mb-8">
+            <div class="flex items-center">
+              <div class="bg-gradient-to-r from-blue-600 to-purple-600 p-3 rounded-xl mr-4">
+                <i class="fas fa-brain text-2xl text-white"></i>
+              </div>
+              <div>
+                <h1 class="text-3xl font-bold gradient-text">Analisis & Klasifikasi Real-time</h1>
+                <p class="text-slate-400 text-sm">Penggabungan Sensor IMU dan EMG untuk Evaluasi Rehabilitasi</p>
+              </div>
+            </div>
+            <div class="flex gap-3">
+              <button onclick="refreshAnalysisData()" class="btn-info">
+                <i class="fas fa-sync-alt"></i> Refresh
+              </button>
+              <button onclick="exportEnhancedAnalysisToPDF()" class="btn-danger">
+                <i class="fas fa-file-pdf"></i> Export PDF
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-12 gap-6 mb-8">
+
+            <div class="col-span-5">
+              <div class="card">
+                <div class="flex items-center justify-between mb-6">
+                  <div class="flex items-center">
+                    <div class="bg-gradient-to-r from-purple-500 to-pink-500 p-2 rounded-lg mr-3">
+                      <i class="fas fa-angle-double-up text-white"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white">Analisis Range of Motion</h3>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs text-slate-400">Status:</span>
+                    <span id="rom-status-indicator"
+                      class="px-2 py-1 rounded-full text-xs font-bold bg-slate-700 text-slate-300">Standby</span>
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                  <div class="bg-slate-800 p-4 rounded-lg text-center">
+                    <div class="flex items-center justify-center mb-2">
+                      <i class="fas fa-crosshairs text-purple-400 mr-2"></i>
+                      <span class="text-sm font-medium text-slate-300">Sudut Lutut</span>
+                    </div>
+                    <div id="display-current-rom" class="text-3xl font-bold text-purple-400">0°</div>
+                  </div>
+
+                  <div class="bg-slate-800 p-4 rounded-lg text-center">
+                    <div class="flex items-center justify-center mb-2">
+                      <span id="rom-category-indicator" class="w-3 h-3 rounded-full mr-2 bg-slate-500"></span>
+                      <span class="text-sm font-medium text-slate-300"> ROM </span>
+                    </div>
+                    <div class="flex items-center justify-center">
+                      <span id="display-total-rom" class="text-3xl font-bold text-yellow-400">0 - 0°</span>
+                      <span id="rom-category-text" class="text-xs ml-2 text-slate-400">(Standby)</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="space-y-3">
+                  <div class="flex justify-between items-center p-3 bg-slate-800/50 rounded-lg">
+                    <span class="flex items-center text-slate-300">
+                      <i class="fas fa-arrow-up text-green-400 mr-2 text-sm"></i>
+                      Fleksi Maksimal
+                    </span>
+                    <span id="display-max-flexion" class="font-bold text-green-400">0°</span>
+                  </div>
+
+                  <div class="flex justify-between items-center p-3 bg-slate-800/50 rounded-lg">
+                    <span class="flex items-center text-slate-300">
+                      <i class="fas fa-arrow-down text-blue-400 mr-2 text-sm"></i>
+                      Ekstensi Maksimal
+                    </span>
+                    <span id="display-max-extension" class="font-bold text-blue-400">0°</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-span-7">
+              <div class="card">
+                <div class="flex items-center justify-between mb-6">
+                  <div class="flex items-center">
+                    <div class="bg-gradient-to-r from-green-500 to-teal-500 p-2 rounded-lg mr-3">
+                      <i class="fas fa-heartbeat text-white"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white">Analisis EMG (mV)</h3>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs text-slate-400">MVC Ref:</span>
+                    <span id="display-mvc-reference"
+                      class="px-2 py-1 rounded bg-purple-600 text-white text-xs font-bold">1000.00 mV</span>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                  <div class="bg-slate-800 p-4 rounded-lg text-center">
+                    <div class="flex items-center justify-center mb-2">
+                      <i class="fas fa-chart-area text-green-400 mr-2 text-sm"></i>
+                      <span class="text-sm font-medium text-slate-300">RMS</span>
+                    </div>
+                    <div id="display-rms" class="text-2xl font-bold text-green-400">0.00 mV</div>
+                  </div>
+
+                  <div class="bg-slate-800 p-4 rounded-lg text-center">
+                    <div class="flex items-center justify-center mb-2">
+                      <i class="fas fa-wave-square text-yellow-400 mr-2 text-sm"></i>
+                      <span class="text-sm font-medium text-slate-300">MVC</span>
+                    </div>
+                    <div id="display-muscle-activation" class="text-2xl font-bold text-yellow-400">0%</div>
+                  </div>
+                </div>
+                <div class="grid grid-cols-1 gap-4 mb-4 justify-items-center">
+                  <!-- RMS Saat Ini & Maksimal -->
+                  <div class="bg-slate-800 p-6 rounded-xl text-center w-64">
+                    <div class="flex items-center justify-center mb-4">
+                      <i class="fas fa-chart-area text-green-400 mr-2 text-lg"></i>
+                      <span class="text-lg font-semibold text-slate-300">RMS (mV) Max </span>
+                    </div>
+                    <!-- RMS Saat Ini -->
+                    <div id="max-rms" class="text-4xl font-extrabold text-green-400 mb-2">0.00 mV</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-12 gap-6 mb-8">
+
+            <div class="col-span-4">
+              <div class="card text-center">
+                <div class="flex items-center justify-center mb-6">
+                  <div class="bg-gradient-to-r from-yellow-500 to-orange-500 p-3 rounded-xl mr-3">
+                    <i class="fas fa-trophy text-white text-xl"></i>
+                  </div>
+                  <h3 class="text-xl font-bold text-white">Hasil Klasifikasi</h3>
+                </div>
+
+                <div class="mb-6">
+                  <div class="flex justify-center items-center mb-4">
+                    <span id="classification-grade" class="font-bold text-7xl">N/A</span>
+                    <span id="grade-icon" class="text-4xl grade-icon ml-4"></span>
+                  </div>
+                  <div class="text-slate-400">
+                    <p id="classification-status" class="font-bold text-2xl mb-2 text-white">Menunggu data...</p>
+                    <p id="classification-description" class="text-sm leading-relaxed">Menunggu data ROM dan EMG untuk
+                      klasifikasi gabungan.</p>
+                  </div>
+                </div>
+
+                <div class="bg-slate-800 p-4 rounded-lg space-y-2">
+                  <div class="flex justify-between text-sm">
+                    <span class="text-slate-400">Total Poin:</span>
+                    <span id="display-total-points" class="text-yellow-400 font-bold">0.0/3.0</span>
+                  </div>
+                  <div class="flex justify-between text-sm">
+                    <span class="text-slate-400">ROM Score (50%):</span>
+                    <span id="display-rom-score" class="text-purple-400 font-bold">0.0/1.5</span>
+                  </div>
+                  <div class="flex justify-between text-sm">
+                    <span class="text-slate-400">EMG Score (50%):</span>
+                    <span id="display-emg-score" class="text-green-400 font-bold">0.0/1.5</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-span-8">
+              <div class="card">
+                <div class="flex items-center mb-6">
+                  <div class="bg-gradient-to-r from-cyan-500 to-blue-500 p-2 rounded-lg mr-3">
+                    <i class="fas fa-info-circle text-white"></i>
+                  </div>
+                  <h3 class="text-xl font-bold text-white">Kriteria Klasifikasi Grade</h3>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                  <div class="space-y-3">
+                    <div
+                      class="grade-explanation bg-gradient-to-r from-green-900/30 to-green-800/30 border-l-4 border-green-400 p-3 rounded-r-lg">
+                      <div class="flex items-center mb-2">
+                        <i class="fas fa-trophy text-green-400 mr-2"></i>
+                        <span class="font-bold text-green-300">Grade A - Excellent (2.5-3.0 poin) 🏆</span>
+                      </div>
+                      <div class="text-xs text-green-200 space-y-1">
+                        <div>• Parameter 1: ROM Total ≥ 120° (1.5 poin)</div>
+                        <div>• Parameter 2: Aktivasi EMG ≥ 60% MVC (1.5 poin)</div>
+                        <div class="mt-2 text-yellow-200">Bobot sama: 50% ROM + 50% EMG</div>
+                      </div>
+                    </div>
+
+                    <div
+                      class="grade-explanation bg-gradient-to-r from-blue-900/30 to-blue-800/30 border-l-4 border-blue-400 p-3 rounded-r-lg">
+                      <div class="flex items-center mb-2">
+                        <i class="fas fa-thumbs-up text-blue-400 mr-2"></i>
+                        <span class="font-bold text-blue-300">Grade B - Good (2.0-2.4 poin) 👍</span>
+                      </div>
+                      <div class="text-xs text-blue-200 space-y-1">
+                        <div>• ROM: ≥120° (1.5) + EMG: 45-59% (1.0) = 2.5 poin</div>
+                        <div>• ROM: 100-119° (1.0) + EMG: ≥60% (1.5) = 2.5 poin</div>
+                        <div>• ROM: 100-119° (1.0) + EMG: 45-59% (1.0) = 2.0 poin</div>
+
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="space-y-3">
+                    <div
+                      class="grade-explanation bg-gradient-to-r from-yellow-900/30 to-yellow-800/30 border-l-4 border-yellow-400 p-3 rounded-r-lg">
+                      <div class="flex items-center mb-2">
+                        <i class="fas fa-exclamation-triangle text-yellow-400 mr-2"></i>
+                        <span class="font-bold text-yellow-300">Grade C - Fair (1.0-1.9 poin) ⚠️</span>
+                      </div>
+                      <div class="text-xs text-yellow-200 space-y-1">
+                        <div>• ROM: 100-119° (1.0) + EMG: 30-44% (0.5) = 1.5 poin</div>
+                        <div>• ROM: 80-99° (0.5) + EMG: 45-59% (1.0) = 1.5 poin</div>
+                        <div>• ROM: 80-99° (0.5) + EMG: 30-44% (0.5) = 1.0 poin</div>
+
+                      </div>
+                    </div>
+
+                    <div
+                      class="grade-explanation bg-gradient-to-r from-red-900/30 to-red-800/30 border-l-4 border-red-400 p-3 rounded-r-lg">
+                      <div class="flex items-center mb-2">
+                        <i class="fas fa-times-circle text-red-400 mr-2"></i>
+                        <span class="font-bold text-red-300">Grade D - Poor (0.5-0.9 poin) ◐</span>
+                      </div>
+                      <div class="text-xs text-red-200 space-y-1">
+                        <div>• ROM: 80-99° (0.5) + EMG: <30% (0)=0.5 poin </div>
+                            <div>• ROM: <80° (0) + EMG: 30-44% (0.5)=0.5 poin </div>
+
+                            </div>
+                        </div>
+                        <div
+                          class="grade-explanation bg-gradient-to-r from-gray-900/30 to-gray-800/30 border-l-4 border-gray-400 p-3 rounded-r-lg">
+                          <div class="flex items-center mb-2">
+                            <i class="fas fa-times text-gray-400 mr-2"></i>
+                            <span class="font-bold text-gray-300">Grade E - Very Poor (0.0-0.4 poin) ❌</span>
+                          </div>
+                          <div class="text-xs text-gray-200 space-y-1">
+                            <div>• ROM: <80° (0) + EMG: <30% (0)=0 poin </div>
+
+                                <div>• Tidak ada parameter yang memenuhi threshold minimum</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-6 mb-8 hidden">
+                  <div class="card">
+                    <div class="flex items-center justify-between mb-4">
+                      <div class="flex items-center">
+                        <i class="fas fa-chart-line text-blue-400 mr-3"></i>
+                        <h4 class="text-lg font-semibold">Grafik Analisis Real-time</h4>
+                      </div>
+                      <button onclick="resetCharts()" class="btn-secondary text-xs px-3 py-1">
+                        <i class="fas fa-redo"></i> Reset
+                      </button>
+                    </div>
+                    <canvas id="combined-analysis-chart" style="max-height: 250px;"></canvas>
+                  </div>
+
+                  <div class="card">
+                    <div class="flex items-center justify-between mb-4">
+                      <div class="flex items-center">
+                        <i class="fas fa-chart-bar text-purple-400 mr-3"></i>
+                        <h4 class="text-lg font-semibold">Distribusi Klasifikasi</h4>
+                      </div>
+                      <span id="total-samples" class="text-xs text-slate-400">0 samples</span>
+                    </div>
+                    <canvas id="classification-chart" style="max-height: 250px;"></canvas>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <div id="log-aktivitas" class="tab-content">
+              <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center">
+                  <i class="fas fa-history text-2xl text-purple-400 mr-4"></i>
+                  <h1 class="text-3xl font-bold gradient-text">Log Aktivitas</h1>
+                </div>
+              </div>
+
+              <div id="log-no-patient" class="info-box">
+                <div class="flex items-center">
+                  <i class="fas fa-info-circle text-blue-500 text-xl mr-3"></i>
+                  <div>
+                    <p class="font-bold text-blue-400">Menampilkan Semua Aktivitas</p>
+                    <p class="text-blue-300">Pilih pasien di menu "Pilih Pasien" untuk melihat aktivitas spesifik</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="table-container">
+                <div class="table">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th style="text-align: left;"><i class="fas fa-user mr-2"></i>Nama</th>
+                        <th><i class="fas fa-venus-mars mr-2"></i>Jenis Kelamin</th>
+                        <th><i class="fas fa-calendar mr-2"></i>Tanggal</th>
+                        <th><i class="fas fa-list-ol mr-2"></i>Sesi</th>
+                        <th><i class="fas fa-clock mr-2"></i>Durasi</th>
+                        <th><i class="fas fa-angle-double-up mr-2"></i>ROM Total</th>
+                        <th><i class="fas fa-arrow-up mr-2"></i>Fleksi Max</th>
+                        <th><i class="fas fa-arrow-down mr-2"></i>Ekstensi Max</th>
+                        <th><i class="fas fa-heartbeat mr-2"></i>RMS EMG</th>
+                        <th><i class="fas fa-percentage mr-2"></i>%MVC</th>
+                        <th><i class="fas fa-medal mr-2"></i>Grade ROM</th>
+                        <th><i class="fas fa-medal mr-2"></i>Grade RMS</th>
+                        <th><i class="fas fa-cogs mr-2"></i>Aksi</th>
+                      </tr>
+                    </thead>
+
+                    <tbody id="log-aktivitas-table">
+                    </tbody>
+                  </table>
+                </div>
+
+                <div id="log-pagination" class="pagination-controls" style="display: none;">
+                  <div class="flex items-center justify-between mt-4">
+                    <div class="text-sm text-slate-400">
+                      Menampilkan <span id="log-start-item">1</span> - <span id="log-end-item">10</span> dari <span
+                        id="log-total-items">0</span> data
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <button id="log-prev-btn" onclick="changeLogPage(-1)" class="btn-secondary" disabled>
+                        <i class="fas fa-chevron-left"></i> Sebelumnya
+                      </button>
+                      <span id="log-page-info" class="text-sm text-slate-300">Halaman 1</span>
+                      <button id="log-next-btn" onclick="changeLogPage(1)" class="btn-secondary" disabled>
+                        Selanjutnya <i class="fas fa-chevron-right"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div id="data" class="tab-content">
+              <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center">
+                  <i class="fas fa-chart-bar text-2xl text-green-400 mr-4"></i>
+                  <h1 class="text-3xl font-bold gradient-text">Data Rehabilitasi</h1>
+                </div>
+                <div class="export-container">
+                  <button onclick="exportToPDF('data')" class="btn-export-professional">
+                    <i class="fas fa-file-pdf"></i>
+                    Export Laporan Profesional
+                  </button>
+                </div>
+              </div>
+
+              <div id="data-no-patient" class="info-box">
+                <div class="flex items-center">
+                  <i class="fas fa-info-circle text-blue-500 text-xl mr-3"></i>
+                  <div>
+                    <p class="font-bold text-blue-400">Menampilkan Semua Data</p>
+                    <p class="text-blue-300">Pilih pasien di menu "Pilih Pasien" untuk melihat data spesifik</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="table-container">
+                <div class="table">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th style="text-align: left;"><i class="fas fa-user mr-2"></i>Nama</th>
+                        <th><i class="fas fa-birthday-cake mr-2"></i>Usia</th>
+                        <th><i class="fas fa-venus-mars mr-2"></i>Jenis Kelamin</th>
+                        <th><i class="fas fa-calendar mr-2"></i>Tanggal</th>
+                        <th><i class="fas fa-list-ol mr-2"></i>Sesi</th>
+                        <th><i class="fas fa-clock mr-2"></i>Durasi</th>
+                        <th><i class="fas fa-angle-double-up mr-2"></i>ROM Total</th>
+                        <th><i class="fas fa-arrow-up mr-2"></i>Fleksi Max</th>
+                        <th><i class="fas fa-arrow-down mr-2"></i>Ekstensi Max</th>
+                        <th><i class="fas fa-wave-square mr-2"></i>RMS EMG</th>
+                        <th><i class="fas fa-percentage mr-2"></i>%MVC</th>
+                        <th><i class="fas fa-medal mr-2"></i>Grade ROM</th>
+                        <th><i class="fas fa-medal mr-2"></i>Grade RMS</th>
+                      </tr>
+                    </thead>
+
+
+                    <tbody id="rehab-data-table">
+                    </tbody>
+                  </table>
+                </div>
+
+                <div id="rehab-pagination" class="pagination-controls" style="display: none;">
+                  <div class="flex items-center justify-between mt-4">
+                    <div class="text-sm text-slate-400">
+                      Menampilkan <span id="rehab-start-item">1</span> - <span id="rehab-end-item">10</span> dari
+                      <span id="rehab-total-items">0</span> data
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <button id="rehab-prev-btn" onclick="changeRehabPage(-1)" class="btn-secondary" disabled>
+                        <i class="fas fa-chevron-left"></i> Sebelumnya
+                      </button>
+                      <span id="rehab-page-info" class="text-sm text-slate-300">Halaman 1</span>
+                      <button id="rehab-next-btn" onclick="changeRehabPage(1)" class="btn-secondary" disabled>
+                        Selanjutnya <i class="fas fa-chevron-right"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="flex items-center mb-6">
+                  <i class="fas fa-chart-line text-2xl text-blue-400 mr-4"></i>
+                  <h4 class="text-xl font-semibold gradient-text">Grafik Perbandingan Rehabilitasi</h4>
+                </div>
+                <div class="chart-container">
+                  <canvas id="comparison-chart" class="w-full" style="height: 250px;"></canvas>
+                </div>
+
+                <div class="stats-grid">
+                  <div class="stats-card blue">
+                    <div class="flex items-center mb-4">
+                      <i class="fas fa-angle-double-up text-blue-400 text-xl mr-3"></i>
+                      <h5 class="font-semibold text-blue-300">Statistik ROM</h5>
+                    </div>
+                    <div class="space-y-2">
+                      <div class="stats-item">
+                        <span class="stats-label">Tertinggi:</span>
+                        <span class="stats-value blue" id="maxROM">0°</span>
+                      </div>
+                      <div class="stats-item">
+                        <span class="stats-label">Terendah:</span>
+                        <span class="stats-value blue" id="minROM">0°</span>
+                      </div>
+                      <div class="stats-item">
+                        <span class="stats-label">Rata-rata:</span>
+                        <span class="stats-value blue" id="avgROM">0°</span>
+                      </div>
+                      <div class="stats-item">
+                        <span class="stats-label">Trend:</span>
+                        <span class="stats-value blue" id="improvementTrend">Stabil</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="stats-card green">
+                    <div class="flex items-center mb-4">
+                      <i class="fas fa-dumbbell text-green-400 text-xl mr-3"></i>
+                      <h5 class="font-semibold text-green-300">Statistik EMG</h5>
+                    </div>
+                    <div class="space-y-2">
+                      <div class="stats-item">
+                        <span class="stats-label">RMS Tertinggi:</span>
+                        <span class="stats-value green" id="maxRMSEMG">0 mV</span>
+                      </div>
+                      <div class="stats-item">
+                        <span class="stats-label">RMS Terendah:</span>
+                        <span class="stats-value green" id="minRMSEMG">0 mV</span>
+                      </div>
+                      <div class="stats-item">
+                        <span class="stats-label">RMS Rata-rata:</span>
+                        <span class="stats-value green" id="avgRMSEMG">0 mV</span>
+                      </div>
+                      <div class="stats-item">
+                        <span class="stats-label">Konsistensi:</span>
+                        <span class="stats-value green" id="consistencyRate">0%</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="stats-grid mt-6">
+                  <div class="stats-card">
+                    <div class="flex items-center mb-4">
+                      <i class="fas fa-chart-line text-purple-400 text-xl mr-3"></i>
+                      <h5 class="font-semibold text-purple-300">Statistik Sesi</h5>
+                    </div>
+                    <div class="space-y-2">
+                      <div class="stats-item">
+                        <span class="stats-label">Total Sesi:</span>
+                        <span class="stats-value" id="totalSessions">0 sesi</span>
+                      </div>
+                      <div class="stats-item">
+                        <span class="stats-label">Total Durasi:</span>
+                        <span class="stats-value" id="totalDuration">0 menit</span>
+                      </div>
+                      <div class="stats-item">
+                        <span class="stats-label">Rata-rata Durasi:</span>
+                        <span class="stats-value" id="avgDuration">0 menit</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="stats-card">
+                    <div class="flex items-center mb-4">
+                      <i class="fas fa-trophy text-yellow-400 text-xl mr-3"></i>
+                      <h5 class="font-semibold text-yellow-300">Distribusi Grade</h5>
+                    </div>
+                    <div class="space-y-2">
+                      <div class="stats-item">
+                        <span class="stats-label">Grade A:</span>
+                        <span class="stats-value text-green-400" id="gradeACount">0 sesi</span>
+                      </div>
+                      <div class="stats-item">
+                        <span class="stats-label">Grade B:</span>
+                        <span class="stats-value text-blue-400" id="gradeBCount">0 sesi</span>
+                      </div>
+                      <div class="stats-item">
+                        <span class="stats-label">Grade C:</span>
+                        <span class="stats-value text-yellow-400" id="gradeCCount">0 sesi</span>
+                      </div>
+                      <div class="stats-item">
+                        <span class="stats-label">Grade D:</span>
+                        <span class="stats-value text-red-400" id="gradeDCount">0 sesi</span>
+                      </div>
+                      <div class="stats-item">
+                        <span class="stats-label">Grade E:</span>
+                        <span class="stats-value text-red-600" id="gradeECount">0 sesi</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="editRehabModal" class="modal">
+        <div class="modal-content">
+          <span class="close" onclick="closeEditRehabModal()">&times;</span>
+          <div class="flex items-center mb-6">
+            <i class="fas fa-edit text-2xl text-blue-400 mr-4"></i>
+            <h2 class="text-2xl font-bold gradient-text">Edit Data Rehabilitasi</h2>
+          </div>
+
+          <div class="grid grid-cols-2 gap-6">
+            <div>
+              <label class="block text-sm font-semibold text-slate-300 mb-2">Nama Pasien</label>
+              <input type="text" id="edit-rehab-name" class="form-input" readonly
+                style="background: rgba(30, 41, 59, 0.5);" />
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-slate-300 mb-2">Sesi Ke-</label>
+              <input type="number" id="edit-rehab-session" class="form-input" readonly
+                style="background: rgba(30, 41, 59, 0.5);" />
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-slate-300 mb-2">Tanggal</label>
+              <input type="date" id="edit-rehab-date" class="form-input" />
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-slate-300 mb-2">Durasi (detik)</label>
+              <input type="number" id="edit-rehab-duration" class="form-input" min="0" />
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-slate-300 mb-2">Rata-rata ROM (°)</label>
+              <input type="number" id="edit-rehab-angle" class="form-input" step="0.01" min="0" />
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-slate-300 mb-2">RMS EMG (mV)</label>
+              <input type="number" id="edit-rehab-rms-emg" class="form-input" step="0.01" min="0" />
+              <p class="text-xs text-slate-400 mt-1">Nilai dalam millivolt (mV)</p>
+            </div>
+
+
+            <div class="flex gap-4 pt-6">
+              <button onclick="saveEditedRehabData()" class="btn-success flex-1">
+                <i class="fas fa-save"></i>
+                Simpan Perubahan
+              </button>
+              <button onclick="closeEditRehabModal()" class="btn-secondary">
+                <i class="fas fa-times"></i>
+                Batal
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <script src="script.js"></script>
+
+    
+
+        <div id="debug-info"
+          style="position: fixed; top: 10px; right: 10px; background: rgba(0,0,0,0.8); color: white; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 12px; z-index: 9999; display: none;">
+          <div>Sesi Aktif: <span id="debug-session-active">TIDAK</span></div>
+          <div>Dijeda: <span id="debug-session-paused">YA</span></div>
+          <div>Firebase: <span id="debug-firebase-status">DISCONNECTED</span></div>
+          <div>Data Terakhir: <span id="debug-last-data">NONE</span></div>
+          <div>Pasien: <span id="debug-patient-name">NONE</span></div>
+        </div>
+
+
+</body>
+
+</html>
